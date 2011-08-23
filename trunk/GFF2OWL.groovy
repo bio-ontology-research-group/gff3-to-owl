@@ -1,0 +1,125 @@
+import org.semanticweb.owlapi.io.* 
+import org.semanticweb.owlapi.model.*
+import org.semanticweb.owlapi.apibinding.OWLManager
+import org.semanticweb.owlapi.vocab.OWLRDFVocabulary
+
+def onturi = "http://bioonto.de/gff3.owl#"
+
+def infile = new File(args[0])
+def outfile = args[1]
+
+def id2class = [:] // maps an OBO-ID to an OWLClass
+
+OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+OWLDataFactory factory = manager.getOWLDataFactory()
+
+def ontSet = new TreeSet()
+//ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/so.obo")))
+ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/so-xp.obo")))
+ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/gene_ontology_ext.obo")))
+
+def somap = [:]
+
+new File("obo/sequence.tbl").splitEachLine("\t") { line ->
+  def id = line[0]
+  def name = line[1].toLowerCase()
+  somap[name] = id
+}
+
+OWLOntology ontology = manager.createOntology(IRI.create(onturi), ontSet)
+
+ontology.getClassesInSignature(true).each {
+  def a = it.toString()
+  a = a.substring(a.indexOf("obo/")+4,a.length()-1)
+  a = a.substring(a.indexOf('#')+1)
+  a = a.replaceAll("_",":")
+  if (id2class[a] == null) {
+    id2class[a] = it
+  }
+}
+
+def addAnno = {resource, prop, cont ->
+  OWLAnnotation anno = factory.getOWLAnnotation(
+    factory.getOWLAnnotationProperty(prop.getIRI()),
+    factory.getOWLTypedLiteral(cont))
+  def axiom = factory.getOWLAnnotationAssertionAxiom(resource.getIRI(),
+						     anno)
+  manager.addAxiom(ontology,axiom)
+}
+
+def r = { String s ->
+  factory.getOWLObjectProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
+}
+
+def c = { String s ->
+  factory.getOWLClass(IRI.create(onturi+s))
+}
+
+def counter = 0
+OWLAxiom ax = null
+infile.splitEachLine("\t") { line ->
+  if (!line[0].startsWith('#')) {
+    def id = line[0]
+    def soterm = line[2]
+    if (soterm != null) {
+      def soid = soterm
+      if (somap[soterm.toLowerCase()]!=null) {
+	soid=somap[soterm.toLowerCase()]
+      }
+      def soclass = id2class[soid]
+      if (soclass == null) {
+	soclass = factory.getOWLThing()
+      }
+      def start = line[3]
+      def end = line[4]
+
+      OWLClass cl = null
+
+      def attributes = line[8]
+      attributes.split(";").each { attr ->
+	if (attr.startsWith("ID=")) {
+	  def desc = attr.substring(3).replaceAll("\\(","").replaceAll("\\)","")
+	  cl = c(desc)
+	}
+      }
+
+      if (cl == null) {
+	def desc = counter+""
+	cl = c("anon-"+desc)
+	counter += 1
+      }
+      ax = factory.getOWLSubClassOfAxiom(cl,soclass)
+      manager.addAxiom(ontology, ax)
+
+      attributes.split(";").each { attr ->
+	if (attr.startsWith("Parent=")) {
+	  def par = c(attr.substring(7))
+	  ax = factory.getOWLSubClassOfAxiom(cl, factory.getOWLObjectSomeValuesFrom(r("part-of"), par))
+	  manager.addAxiom(ontology, ax)
+	  ax = factory.getOWLSubClassOfAxiom(par, factory.getOWLObjectSomeValuesFrom(r("has-part"), cl))
+	  manager.addAxiom(ontology, ax)
+	}
+	if (attr.startsWith("description=")) {
+	  def desc = attr.substring(12)
+	  addAnno(cl, OWLRDFVocabulary.RDF_DESCRIPTION, desc)
+	}
+	if (attr.startsWith("Name=")) {
+	  def desc = attr.substring(5)
+	  addAnno(cl, OWLRDFVocabulary.RDFS_LABEL, desc)
+	}
+	if (attr.startsWith("Ontology_term")) {
+	  def term = attr.substring(13)
+	  term.split(",").each { t ->
+	    if (id2class[t]!=null) {
+	      ax = factory.getOWLSubClassOfAxiom(cl, factory.getOWLObjectSomeValuesFrom(r("has-annotation"), id2class[t]))
+	      manager.addAxiom(ontology, ax)
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+manager.saveOntology(ontology, IRI.create("file:"+outfile))
+
