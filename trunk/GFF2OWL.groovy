@@ -55,6 +55,11 @@ def c = { String s ->
   factory.getOWLClass(IRI.create(onturi+s))
 }
 
+def a = { String s ->
+  factory.getOWLAnnotationProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
+}
+
+
 def counter = 0
 OWLAxiom ax = null
 infile.splitEachLine("\t") { line ->
@@ -91,6 +96,13 @@ infile.splitEachLine("\t") { line ->
       ax = factory.getOWLSubClassOfAxiom(cl,soclass)
       manager.addAxiom(ontology, ax)
 
+      addAnno(cl, a("start"), start)
+      addAnno(cl, a("end"), end)
+      addAnno(cl, a("source"), line[1])
+      addAnno(cl, a("score"), line[5])
+      addAnno(cl, a("strand"), line[6])
+      addAnno(cl, a("phase"), line[7])
+
       attributes.split(";").each { attr ->
 	if (attr.startsWith("Parent=")) {
 	  def par = c(attr.substring(7))
@@ -106,6 +118,14 @@ infile.splitEachLine("\t") { line ->
 	if (attr.startsWith("Name=")) {
 	  def desc = attr.substring(5)
 	  addAnno(cl, OWLRDFVocabulary.RDFS_LABEL, desc)
+	}
+	if (attr.startsWith("Alias=")) {
+	  def desc = attr.substring(6)
+	  addAnno(cl, OWLRDFVocabulary.RDFS_LABEL, desc)
+	}
+	if (attr.startsWith("Dbxref=")) {
+	  def desc = attr.substring(7)
+	  addAnno(cl, a("dbxref"), desc)
 	}
 	if (attr.startsWith("Ontology_term")) {
 	  def term = attr.substring(13)
