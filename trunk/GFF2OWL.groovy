@@ -52,6 +52,7 @@ def r = { String s ->
 }
 
 def c = { String s ->
+  s = s.replaceAll("\\(","").replaceAll("\\)","")
   factory.getOWLClass(IRI.create(onturi+s))
 }
 
@@ -82,8 +83,8 @@ infile.splitEachLine("\t") { line ->
 
       def attributes = line[8]
       attributes.split(";").each { attr ->
-	if (attr.startsWith("ID=")) {
-	  def desc = attr.substring(3).replaceAll("\\(","").replaceAll("\\)","")
+	if (attr.toLowerCase().startsWith("id=")) {
+	  def desc = attr.substring(3)
 	  cl = c(desc)
 	}
       }
@@ -111,23 +112,23 @@ infile.splitEachLine("\t") { line ->
 	  ax = factory.getOWLSubClassOfAxiom(par, factory.getOWLObjectSomeValuesFrom(r("has-part"), cl))
 	  manager.addAxiom(ontology, ax)
 	}
-	if (attr.startsWith("description=")) {
+	if (attr.toLowerCase().startsWith("description=")) {
 	  def desc = attr.substring(12)
 	  addAnno(cl, OWLRDFVocabulary.RDF_DESCRIPTION, desc)
 	}
-	if (attr.startsWith("Name=")) {
+	if (attr.toLowerCase().startsWith("name=")) {
 	  def desc = attr.substring(5)
 	  addAnno(cl, OWLRDFVocabulary.RDFS_LABEL, desc)
 	}
-	if (attr.startsWith("Alias=")) {
+	if (attr.toLowerCase().startsWith("alias=")) {
 	  def desc = attr.substring(6)
 	  addAnno(cl, OWLRDFVocabulary.RDFS_LABEL, desc)
 	}
-	if (attr.startsWith("Dbxref=")) {
+	if (attr.toLowerCase().startsWith("dbxref=")) {
 	  def desc = attr.substring(7)
 	  addAnno(cl, a("dbxref"), desc)
 	}
-	if (attr.startsWith("Ontology_term")) {
+	if (attr.toLowerCase().startsWith("ontology_term")) {
 	  def term = attr.substring(13)
 	  term.split(",").each { t ->
 	    if (id2class[t]!=null) {
