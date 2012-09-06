@@ -51,10 +51,6 @@ def r = { String s ->
   factory.getOWLObjectProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
 }
 
-def r2 = { String s ->
-  factory.getOWLObjectProperty(IRI.create("http://sadiframework.org/ontologies/GMOD/RangedSequencePosition.owl#"+s))
-}
-
 def c = { String s ->
   s = s.replaceAll("\\(","").replaceAll("\\)","")
   factory.getOWLClass(IRI.create(onturi+s))
@@ -91,6 +87,7 @@ infile.splitEachLine("\t") { line ->
 
       def attributes = line[8]
       attributes.split(";").each { attr ->
+	attr = URLDecoder.decode(attr)
 	if (attr.toLowerCase().startsWith("id=")) {
 	  def desc = attr.substring(3)
 	  cl = i(desc)
@@ -113,6 +110,7 @@ infile.splitEachLine("\t") { line ->
       addAnno(cl, a("phase"), line[7])
 
       attributes.split(";").each { attr ->
+	attr = URLDecoder.decode(attr)
 	if (attr.startsWith("Parent=")) {
 	  def par = i(attr.substring(7))
 	  ax = factory.getOWLObjectPropertyAssertionAxiom(r("part-of"), cl, par)
@@ -122,6 +120,10 @@ infile.splitEachLine("\t") { line ->
 	}
 	if (attr.toLowerCase().startsWith("description=")) {
 	  def desc = attr.substring(12)
+	  addAnno(cl, OWLRDFVocabulary.RDF_DESCRIPTION, desc)
+	}
+	if (attr.toLowerCase().startsWith("node=")) {
+	  def desc = attr.substring(5)
 	  addAnno(cl, OWLRDFVocabulary.RDF_DESCRIPTION, desc)
 	}
 	if (attr.toLowerCase().startsWith("name=")) {
