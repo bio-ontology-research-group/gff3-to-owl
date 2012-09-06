@@ -59,6 +59,10 @@ def c = { String s ->
   s = s.replaceAll("\\(","").replaceAll("\\)","")
   factory.getOWLClass(IRI.create(onturi+s))
 }
+def i = { String s ->
+  s = s.replaceAll("\\(","").replaceAll("\\)","")
+  factory.getOWLNamedIndividual(IRI.create(onturi+s))
+}
 
 def a = { String s ->
   factory.getOWLAnnotationProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
@@ -83,22 +87,22 @@ infile.splitEachLine("\t") { line ->
       def start = line[3]
       def end = line[4]
 
-      OWLClass cl = null
+      def cl = null
 
       def attributes = line[8]
       attributes.split(";").each { attr ->
 	if (attr.toLowerCase().startsWith("id=")) {
 	  def desc = attr.substring(3)
-	  cl = c(desc)
+	  cl = i(desc)
 	}
       }
 
       if (cl == null) {
 	def desc = counter+""
-	cl = c("anon-"+desc)
+	cl = i("anon-"+desc)
 	counter += 1
       }
-      ax = factory.getOWLSubClassOfAxiom(cl,soclass)
+      ax = factory.getOWLClassAssertionAxiom(soclass, cl)
       manager.addAxiom(ontology, ax)
 
       addAnno(cl, a("start"), start)
@@ -110,10 +114,10 @@ infile.splitEachLine("\t") { line ->
 
       attributes.split(";").each { attr ->
 	if (attr.startsWith("Parent=")) {
-	  def par = c(attr.substring(7))
-	  ax = factory.getOWLSubClassOfAxiom(cl, factory.getOWLObjectSomeValuesFrom(r("part-of"), par))
+	  def par = i(attr.substring(7))
+	  ax = factory.getOWLObjectPropertyAssertionAxiom(r("part-of"), cl, par)
 	  manager.addAxiom(ontology, ax)
-	  ax = factory.getOWLSubClassOfAxiom(par, factory.getOWLObjectSomeValuesFrom(r("has-part"), cl))
+	  ax = factory.getOWLObjectPropertyAssertionAxiom(r("has-part"), cl, par)
 	  manager.addAxiom(ontology, ax)
 	}
 	if (attr.toLowerCase().startsWith("description=")) {
@@ -136,7 +140,7 @@ infile.splitEachLine("\t") { line ->
 	  def term = attr.substring(13)
 	  term.split(",").each { t ->
 	    if (id2class[t]!=null) {
-	      ax = factory.getOWLSubClassOfAxiom(cl, factory.getOWLObjectSomeValuesFrom(r("has-annotation"), id2class[t]))
+	      ax = factory.getOWLClassAssertionAxiom(factory.getOWLObjectSomeValuesFrom(r("has-annotation"), id2class[t]), cl)
 	      manager.addAxiom(ontology, ax)
 	    }
 	  }
