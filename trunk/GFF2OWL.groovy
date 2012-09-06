@@ -3,7 +3,7 @@ import org.semanticweb.owlapi.model.*
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.vocab.OWLRDFVocabulary
 
-def onturi = "http://bioonto.de/gff3.owl#"
+def onturi = "http://phenomebrowser.net/gff3/#"
 
 def infile = new File(args[0])
 def outfile = args[1]
@@ -16,7 +16,7 @@ OWLDataFactory factory = manager.getOWLDataFactory()
 def ontSet = new TreeSet()
 //ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/so.obo")))
 ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/so-xp.obo")))
-ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/gene_ontology_ext.obo")))
+ontSet.add(manager.loadOntologyFromOntologyDocument(new File("obo/gene_ontology_edit.obo")))
 
 def somap = [:]
 
@@ -49,6 +49,10 @@ def addAnno = {resource, prop, cont ->
 
 def r = { String s ->
   factory.getOWLObjectProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
+}
+
+def r2 = { String s ->
+  factory.getOWLObjectProperty(IRI.create("http://sadiframework.org/ontologies/GMOD/RangedSequencePosition.owl#"+s))
 }
 
 def c = { String s ->
