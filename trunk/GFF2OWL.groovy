@@ -102,6 +102,7 @@ infile.splitEachLine("\t") { line ->
       ax = factory.getOWLClassAssertionAxiom(soclass, cl)
       manager.addAxiom(ontology, ax)
 
+      
       addAnno(cl, a("start"), start)
       addAnno(cl, a("end"), end)
       addAnno(cl, a("source"), line[1])
