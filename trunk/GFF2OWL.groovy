@@ -48,7 +48,11 @@ def addAnno = {resource, prop, cont ->
 }
 
 def r = { String s ->
-  factory.getOWLObjectProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
+  factory.getOWLObjectProperty(IRI.create(onturi+s))
+}
+
+def d = { String s ->
+  factory.getOWLDataProperty(IRI.create(onturi+s))
 }
 
 def c = { String s ->
@@ -61,9 +65,11 @@ def i = { String s ->
 }
 
 def a = { String s ->
-  factory.getOWLAnnotationProperty(IRI.create("http://bioonto.de/ro2.owl#"+s))
+  factory.getOWLAnnotationProperty(IRI.create(onturi+s))
 }
 
+def position = c("Position") // position value (exact or fuzzy)
+def location = c("Location") // has start and end position
 
 def counter = 0
 OWLAxiom ax = null
@@ -80,8 +86,10 @@ infile.splitEachLine("\t") { line ->
       if (soclass == null) {
 	soclass = factory.getOWLThing()
       }
-      def start = line[3]
-      def end = line[4]
+      def start = new Integer(line[3])
+      def end = new Integer(line[4])
+
+      def strand = line[6]
 
       def cl = null
 
@@ -102,6 +110,46 @@ infile.splitEachLine("\t") { line ->
       ax = factory.getOWLClassAssertionAxiom(soclass, cl)
       manager.addAxiom(ontology, ax)
 
+      def loccl = factory.getOWLAnonymousIndividual()
+      ax = factory.getOWLClassAssertionAxiom(location, loccl)
+      manager.addAxiom(ontology, ax)
+      def startcl = factory.getOWLAnonymousIndividual()
+      def endcl = factory.getOWLAnonymousIndividual()
+
+      if (strand=="+") {
+	ax = factory.getOWLClassAssertionAxiom(c("ForwardStrandPosition"), startcl)
+	manager.addAxiom(ontology, ax)
+	ax = factory.getOWLClassAssertionAxiom(c("ForwardStrandPosition"), endcl)
+	manager.addAxiom(ontology, ax)
+      } else if (strand=="-") {
+	ax = factory.getOWLClassAssertionAxiom(c("ReverseStrandPosition"), startcl)
+	manager.addAxiom(ontology, ax)
+	ax = factory.getOWLClassAssertionAxiom(c("ReverseStrandPosition"), endcl)
+	manager.addAxiom(ontology, ax)
+      } else if (strand==".") { // unstranded
+	ax = factory.getOWLClassAssertionAxiom(c("UnstrandedPosition"), startcl)
+	manager.addAxiom(ontology, ax)
+	ax = factory.getOWLClassAssertionAxiom(c("UnstrandedPosition"), endcl)
+	manager.addAxiom(ontology, ax)
+      } else { // relevant but unknown; same as "?" in GFF
+	ax = factory.getOWLClassAssertionAxiom(c("Position"), startcl)
+	manager.addAxiom(ontology, ax)
+	ax = factory.getOWLClassAssertionAxiom(c("Position"), endcl)
+	manager.addAxiom(ontology, ax)
+      }
+
+
+      ax = factory.getOWLObjectPropertyAssertionAxiom(r("start"), loccl, startcl)
+      manager.addAxiom(ontology, ax)
+      ax = factory.getOWLObjectPropertyAssertionAxiom(r("end"), loccl, endcl)
+      manager.addAxiom(ontology, ax)
+      ax = factory.getOWLDataPropertyAssertionAxiom(d("position"), startcl, start)
+      manager.addAxiom(ontology, ax)
+      ax = factory.getOWLDataPropertyAssertionAxiom(d("position"), endcl, end)
+      manager.addAxiom(ontology, ax)
+
+      ax = factory.getOWLObjectPropertyAssertionAxiom(r("location"), cl, loccl)
+      manager.addAxiom(ontology, ax)
       
       addAnno(cl, a("start"), start)
       addAnno(cl, a("end"), end)
