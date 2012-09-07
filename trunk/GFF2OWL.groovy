@@ -151,8 +151,8 @@ infile.splitEachLine("\t") { line ->
       ax = factory.getOWLObjectPropertyAssertionAxiom(r("location"), cl, loccl)
       manager.addAxiom(ontology, ax)
       
-      addAnno(cl, a("start"), start)
-      addAnno(cl, a("end"), end)
+      //      addAnno(cl, a("start"), start)
+      //      addAnno(cl, a("end"), end)
       addAnno(cl, a("source"), line[1])
       addAnno(cl, a("score"), line[5])
       addAnno(cl, a("strand"), line[6])
